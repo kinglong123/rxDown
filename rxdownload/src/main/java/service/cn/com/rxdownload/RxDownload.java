@@ -2,7 +2,12 @@ package service.cn.com.rxdownload;
 
 import android.content.Context;
 
+import java.io.InterruptedIOException;
+import java.net.SocketException;
+
 import io.reactivex.Observable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.plugins.RxJavaPlugins;
 import service.cn.com.rxdownload.entity.DownloadBean;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 import service.cn.com.rxdownload.function.DownloadHelper;
@@ -20,6 +25,21 @@ public class RxDownload {
         this.context = context.getApplicationContext();
         downloadHelper = new DownloadHelper(context);
 
+    }
+    static {
+        RxJavaPlugins.setErrorHandler(new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) throws Exception {
+                if (throwable instanceof InterruptedException) {
+
+                } else if (throwable instanceof InterruptedIOException) {
+
+                } else if (throwable instanceof SocketException) {
+
+                }
+                throwable.printStackTrace();
+            }
+        });
     }
 
     /**

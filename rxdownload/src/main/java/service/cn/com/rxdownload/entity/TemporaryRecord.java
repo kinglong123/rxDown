@@ -142,7 +142,7 @@ public class TemporaryRecord {
      * @param e        emitter
      * @param response response
      */
-    public void save(FlowableEmitter<DownloadStatus> e, Response<ResponseBody> response) {
+    public void save(FlowableEmitter<DownloadStatus> e, Response<ResponseBody> response) throws Exception{
         fileHelper.saveFile(e, file(), response);
     }
 

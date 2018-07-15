@@ -103,7 +103,7 @@ public class FileHelper {
                 closeQuietly(outputStream);
                 closeQuietly(resp.body());
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             emitter.onError(e);
         }
     }

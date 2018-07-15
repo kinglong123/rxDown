@@ -18,6 +18,8 @@ import service.cn.com.rxdownload.RxDownload;
 import service.cn.com.rxdownload.entity.DownloadBean;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 
+import static service.cn.com.rxdownload.utils.Utils.dispose;
+
 public class MainActivity extends AppCompatActivity {
 
     @InjectView(R.id.textView)
@@ -47,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
     @InjectView(R.id.content_basic_download)
     RelativeLayout mContentBasicDownload;
 
+    private Disposable disposable;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,10 +64,19 @@ public class MainActivity extends AppCompatActivity {
                 start();
             }
         });
+        mFinish.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pause();
+            }
+        });
     }
 
     public final static String URL = "http://dldir1.qq.com/weixin/android/weixin6330android920.apk";
+    private void pause() {
 
+        dispose(disposable);
+    }
     private void start() {
 
 
@@ -73,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
                 .subscribe(new Observer<DownloadStatus>() {
                     @Override
                     public void onSubscribe(Disposable d) {
-//                        disposable = d;
+                        disposable = d;
 //                        downloadController.setState(new DownloadController.Started());
                     }
 
@@ -81,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onNext(DownloadStatus status) {
 
                         System.out.println("111111111111111:" + status.getPercent());
+                        mProgress.setProgress((int) (status.getDownloadSize()*100/status.getTotalSize()));
 
                     }
 

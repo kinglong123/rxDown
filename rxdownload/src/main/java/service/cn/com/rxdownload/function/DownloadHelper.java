@@ -17,6 +17,7 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
@@ -100,21 +101,21 @@ public class DownloadHelper {
                     }
                 })
 
-//                .doOnError(new Consumer<Throwable>() {
-//                    @Override
-//                    public void accept(Throwable throwable) throws Exception {
-//                        //logError(throwable);
-//
-//                        throwable.printStackTrace();
-////                        System.out.println("s:"+throwable.printStackTrace(););
-//                    }
-//                })
-//                .doFinally(new Action() {
-//                    @Override
-//                    public void run() throws Exception {
-//                        //recordTable.delete(bean.getUrl());
-//                    }
-//                })
+                .doOnError(new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        //logError(throwable);
+
+                        throwable.printStackTrace();
+//                        System.out.println("s:"+throwable.printStackTrace(););
+                    }
+                })
+                .doFinally(new Action() {
+                    @Override
+                    public void run() throws Exception {
+                        recordTable.delete(bean.getUrl());
+                    }
+                })
                 ;
     }
     /**
@@ -225,6 +226,7 @@ public class DownloadHelper {
 //        });
 
 
+        //每种都去下载
         recordTable.getMap().get(bean.getUrl()).prepareRangeDownload();//创建文件
 
 
@@ -257,36 +259,36 @@ public class DownloadHelper {
                     }
                 })
 
-//                .doOnError(new Consumer<Throwable>() {
-//                    @Override
-//                    public void accept(Throwable throwable) throws Exception {
-//                        throwable.printStackTrace();
-//                    }
-//                })
-//                .doOnComplete(new Action() {
-//                    @Override
-//                    public void run() throws Exception {
-//
-//                    }
-//                })
-//                .doOnCancel(new Action() {
-//                    @Override
-//                    public void run() throws Exception {
-//
-//                    }
-//                })
-//                .doFinally(new Action() {
-//                    @Override
-//                    public void run() throws Exception {
-//
-//                    }
-//                })
+                .doOnError(new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
+                    }
+                })
+                .doOnComplete(new Action() {
+                    @Override
+                    public void run() throws Exception {
+
+                    }
+                })
+                .doOnCancel(new Action() {
+                    @Override
+                    public void run() throws Exception {
+
+                    }
+                })
+                .doFinally(new Action() {
+                    @Override
+                    public void run() throws Exception {
+
+                    }
+                })
                 .toObservable();
     }
 
     protected Publisher<DownloadStatus> downloadFile(final DownloadBean bean) {
         return downloadApi.download(null, bean.getUrl())
-                .subscribeOn(Schedulers.io())  //Important!
+//                .subscribeOn(Schedulers.io())  //Important!
                 .flatMap(new Function<Response<ResponseBody>, Publisher<DownloadStatus>>() {
                     @Override
                     public Publisher<DownloadStatus> apply(Response<ResponseBody> response) throws Exception {
