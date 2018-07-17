@@ -10,7 +10,7 @@ public final class Constant {
 
     public static final String TMP_SUFFIX = ".tmp";  //temp file
     public static final String LMF_SUFFIX = ".lmf";  //last modify file
-    public static final String CACHE = ".cache";    //cache directory
+    public static final String CACHE = "cachess";    //cache directory
 
     /**
      * test

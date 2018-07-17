@@ -1,7 +1,6 @@
 package service.cn.com.rxdownload.function;
 
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscription;
 
 import android.content.Context;
 
@@ -35,6 +34,7 @@ import static android.os.Environment.getExternalStoragePublicDirectory;
 import static service.cn.com.rxdownload.utils.Constant.DOWNLOAD_URL_EXISTS;
 import static service.cn.com.rxdownload.utils.Constant.NORMAL_RETRY_HINT;
 import static service.cn.com.rxdownload.utils.Constant.REQUEST_RETRY_HINT;
+import static service.cn.com.rxdownload.utils.Constant.TEST_RANGE_SUPPORT;
 import static service.cn.com.rxdownload.utils.Constant.URL_ILLEGAL;
 import static service.cn.com.rxdownload.utils.Utils.formatStr;
 import static service.cn.com.rxdownload.utils.Utils.retry;
@@ -87,19 +87,19 @@ public class DownloadHelper {
                         return getDownloadType(bean.getUrl());
                     }
                 })
-//                .flatMap(new Function<DownloadType, ObservableSource<DownloadStatus>>() {
-//                    @Override
-//                    public ObservableSource<DownloadStatus> apply(DownloadType type) throws Exception {
-//                        return download(type);
-//                    }
-//                })
                 .flatMap(new Function<DownloadType, ObservableSource<DownloadStatus>>() {
                     @Override
                     public ObservableSource<DownloadStatus> apply(DownloadType type) throws Exception {
-
-                        return download(bean);
+                        return download(type);
                     }
                 })
+//                .flatMap(new Function<DownloadType, ObservableSource<DownloadStatus>>() {
+//                    @Override
+//                    public ObservableSource<DownloadStatus> apply(DownloadType type) throws Exception {
+//
+//                        return download(bean);
+//                    }
+//                })
 
                 .doOnError(new Consumer<Throwable>() {
                     @Override
@@ -133,12 +133,12 @@ public class DownloadHelper {
                         return checkUrl(url);//确认大小
                     }
                 })
-//                .flatMap(new Function<Object, ObservableSource<Object>>() {
-//                    @Override
-//                    public ObservableSource<Object> apply(Object o) throws Exception {
-//                        return checkRange(url);//确认支持支持分块
-//                    }
-//                })
+                .flatMap(new Function<Object, ObservableSource<Object>>() {
+                    @Override
+                    public ObservableSource<Object> apply(Object o) throws Exception {
+                        return checkRange(url);//确认支持支持分块
+                    }
+                })
                 .doOnNext(new Consumer<Object>() {
                     @Override
                     public void accept(Object o) throws Exception {
@@ -149,13 +149,107 @@ public class DownloadHelper {
                 .flatMap(new Function<Object, ObservableSource<DownloadType>>() {
                     @Override
                     public ObservableSource<DownloadType> apply(Object o) throws Exception {
-//                        return recordTable.fileExists(url) ? existsType(url) : nonExistsType(url);
-                        return Observable.just(recordTable.generateFileExistsType(url));
+
+
+                        //重点来了
+                        return recordTable.fileExists(url) ? existsType(url) : nonExistsType(url);
+//                        return Observable.just(recordTable.generateFileExistsType(url));
 //                        new DownloadType.NormalDownload(map.get(url));
                     }
                 })
 
                 ;
+    }
+
+
+    /**
+     * Gets the download type of file non-existence.
+     *
+     * @param url file url
+     * @return Download Type
+     */
+    private Observable<DownloadType> nonExistsType(final String url) {
+        return Observable.just(1)
+                .flatMap(new Function<Integer, ObservableSource<DownloadType>>() {
+                    @Override
+                    public ObservableSource<DownloadType> apply(Integer integer)
+                            throws Exception {
+                        return Observable.just(recordTable.generateNonExistsType(url));
+                    }
+                });
+    }
+    /**
+     * Gets the download type of file existence.
+     *
+     * @param url file url
+     * @return Download Type
+     */
+    private Observable<DownloadType> existsType(final String url) {
+        return Observable.just(1)
+                .map(new Function<Integer, String>() {
+                    @Override
+                    public String apply(Integer integer) throws Exception {
+                        return recordTable.readLastModify(url);//更新时间
+                    }
+                })
+                .flatMap(new Function<String, ObservableSource<Object>>() {
+                    @Override
+                    public ObservableSource<Object> apply(String s) throws Exception {
+                        return checkFile(url, s);//服务端是否改变过
+                    }
+                })
+                .flatMap(new Function<Object, ObservableSource<DownloadType>>() {
+                    @Override
+                    public ObservableSource<DownloadType> apply(Object o)
+                            throws Exception {
+                        return Observable.just(recordTable.generateFileExistsType(url));
+                    }
+                });
+    }
+    /**
+     * http checkRangeByHead request,checkRange need info, check whether if server file has changed.
+     *
+     * @param url url
+     * @return empty Observable
+     */
+    private ObservableSource<Object> checkFile(final String url, String lastModify) {
+        return downloadApi.checkFileByHead(lastModify, url)
+                .doOnNext(new Consumer<Response<Void>>() {
+                    @Override
+                    public void accept(Response<Void> response) throws Exception {
+                        recordTable.saveFileState(url, response);
+                    }
+                })
+                .map(new Function<Response<Void>, Object>() {
+                    @Override
+                    public Object apply(Response<Void> response) throws Exception {
+                        return new Object();
+                    }
+                })
+                .compose(retry(REQUEST_RETRY_HINT, maxRetryCount));
+    }
+
+    /**
+     * http checkRangeByHead request,checkRange need info.
+     *
+     * @param url url
+     * @return empty Observable
+     */
+    private ObservableSource<Object> checkRange(final String url) {
+        return downloadApi.checkRangeByHead(TEST_RANGE_SUPPORT, url)
+                .doOnNext(new Consumer<Response<Void>>() {
+                    @Override
+                    public void accept(Response<Void> response) throws Exception {
+                        recordTable.saveRangeInfo(url, response);
+                    }
+                })
+                .map(new Function<Response<Void>, Object>() {
+                    @Override
+                    public Object apply(Response<Void> response) throws Exception {
+                        return new Object();
+                    }
+                })
+                .compose(retry(REQUEST_RETRY_HINT, maxRetryCount));
     }
 
 
@@ -215,7 +309,12 @@ public class DownloadHelper {
         recordTable.add(bean.getUrl(), new TemporaryRecord(bean));//把url加到下载列表中
     }
 
-    private ObservableSource<DownloadStatus> download(final DownloadBean bean)
+
+
+
+
+
+    private ObservableSource<DownloadStatus> download(DownloadType downloadType)
             throws IOException, ParseException {
 //        downloadType.prepareDownload();
 //        return Observable.just(1).flatMap(new Function<Integer, ObservableSource<DownloadStatus>>() {
@@ -227,64 +326,85 @@ public class DownloadHelper {
 
 
         //每种都去下载
-        recordTable.getMap().get(bean.getUrl()).prepareRangeDownload();//创建文件
+//        recordTable.getMap().get(bean.getUrl()).prepareRangeDownload();//创建文件
 
+        //这边判断下师傅文件以及下载了的如果以及下载的，不需求创建文件了，继续下载
 
-        return startDownload(bean);
+        downloadType.prepareDownload();
+        return downloadType.startDownload();
     }
 
+//    private ObservableSource<DownloadStatus> download(final DownloadBean bean)
+//            throws IOException, ParseException {
+////        downloadType.prepareDownload();
+////        return Observable.just(1).flatMap(new Function<Integer, ObservableSource<DownloadStatus>>() {
+////            @Override
+////            public ObservableSource<DownloadStatus> apply(Integer integer) throws Exception {
+////                return startDownload(bean);
+////            }
+////        });
+//
+//
+//        //每种都去下载
+//        recordTable.getMap().get(bean.getUrl()).prepareRangeDownload();//创建文件
+//
+//        //这边判断下师傅文件以及下载了的如果以及下载的，不需求创建文件了，继续下载
+//
+//        return startDownload(bean);
+//    }
 
-    public Observable<DownloadStatus> startDownload(final DownloadBean bean) {
-        return Flowable.just(1)
-                .doOnSubscribe(new Consumer<Subscription>() {
-                    @Override
-                    public void accept(Subscription subscription) throws Exception {
-//                        log(startLog());
-//                        record.start();
-                    }
-                })
-                .flatMap(new Function<Integer, Publisher<DownloadStatus>>() {
-                    @Override
-                    public Publisher<DownloadStatus> apply(Integer integer) throws Exception {
-                        System.out.println("call1111111111111111:"+Thread.currentThread().getName());
-                        return downloadFile(bean);
-                    }
-                })
-                .observeOn(Schedulers.io())
-                .map(new Function<DownloadStatus, DownloadStatus>() {
-                    @Override
-                    public DownloadStatus apply(@NonNull DownloadStatus status) throws Exception {
-                        System.out.println("1111111111111111133333333333333");
-                        return status;
-                    }
-                })
 
-                .doOnError(new Consumer<Throwable>() {
-                    @Override
-                    public void accept(Throwable throwable) throws Exception {
-                        throwable.printStackTrace();
-                    }
-                })
-                .doOnComplete(new Action() {
-                    @Override
-                    public void run() throws Exception {
-
-                    }
-                })
-                .doOnCancel(new Action() {
-                    @Override
-                    public void run() throws Exception {
-
-                    }
-                })
-                .doFinally(new Action() {
-                    @Override
-                    public void run() throws Exception {
-
-                    }
-                })
-                .toObservable();
-    }
+//    public Observable<DownloadStatus> startDownload(final DownloadBean bean) {
+//        return Flowable.just(1)
+//                .doOnSubscribe(new Consumer<Subscription>() {
+//                    @Override
+//                    public void accept(Subscription subscription) throws Exception {
+////                        log(startLog());
+////                        record.start();
+//                    }
+//                })
+//                .flatMap(new Function<Integer, Publisher<DownloadStatus>>() {
+//                    @Override
+//                    public Publisher<DownloadStatus> apply(Integer integer) throws Exception {
+//                        System.out.println("call1111111111111111:"+Thread.currentThread().getName());
+//                        return downloadFile(bean);
+//                    }
+//                })
+//                .observeOn(Schedulers.io())
+//                .map(new Function<DownloadStatus, DownloadStatus>() {
+//                    @Override
+//                    public DownloadStatus apply(@NonNull DownloadStatus status) throws Exception {
+////                        System.out.println("1111111111111111133333333333333");
+//                        return status;
+//                    }
+//                })
+//
+//                .doOnError(new Consumer<Throwable>() {
+//                    @Override
+//                    public void accept(Throwable throwable) throws Exception {
+//                        throwable.printStackTrace();
+//                    }
+//                })
+//                .doOnComplete(new Action() {
+//                    @Override
+//                    public void run() throws Exception {
+//
+//                    }
+//                })
+//                .doOnCancel(new Action() {
+//                    @Override
+//                    public void run() throws Exception {
+//
+//                    }
+//                })
+//                .doFinally(new Action() {
+//                    @Override
+//                    public void run() throws Exception {
+//
+//                    }
+//                })
+//                .toObservable();
+//    }
 
     protected Publisher<DownloadStatus> downloadFile(final DownloadBean bean) {
         return downloadApi.download(null, bean.getUrl())

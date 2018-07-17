@@ -13,6 +13,7 @@ import java.text.ParseException;
 import io.reactivex.FlowableEmitter;
 import okhttp3.ResponseBody;
 import retrofit2.Response;
+import service.cn.com.rxdownload.entity.DownloadRange;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 import service.cn.com.rxdownload.utils.Utils;
 
@@ -92,7 +93,7 @@ public class FileHelper {
                     downloadSize += readLen;
                     status.setDownloadSize(downloadSize);
 
-                    System.out.println("11111111111while");
+//                    System.out.println("11111111111while");
                     emitter.onNext(status);
                 }
 
@@ -327,6 +328,22 @@ public class FileHelper {
         return residue;
     }
 
+    public DownloadRange readDownloadRange(File tempFile, int i) throws IOException {
 
+        RandomAccessFile record = null;
+        FileChannel channel = null;
+        try {
+            record = new RandomAccessFile(tempFile, ACCESS);
+            channel = record.getChannel();
+            MappedByteBuffer buffer = channel
+                    .map(READ_WRITE, i * EACH_RECORD_SIZE, (i + 1) * EACH_RECORD_SIZE);
+            long startByte = buffer.getLong();
+            long endByte = buffer.getLong();
+            return new DownloadRange(startByte, endByte);
+        } finally {
+            closeQuietly(channel);
+            closeQuietly(record);
+        }
+    }
 
 }

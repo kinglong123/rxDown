@@ -1,10 +1,16 @@
 package service.cn.com.rxdownload.entity;
 
+import org.reactivestreams.Publisher;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
+import io.reactivex.FlowableOnSubscribe;
+import io.reactivex.functions.Function;
 import okhttp3.ResponseBody;
 import retrofit2.Response;
 import service.cn.com.rxdownload.db.DataBaseHelper;
@@ -14,6 +20,7 @@ import service.cn.com.rxdownload.function.FileHelper;
 import static android.text.TextUtils.concat;
 import static java.io.File.separator;
 import static service.cn.com.rxdownload.utils.Constant.CACHE;
+import static service.cn.com.rxdownload.utils.Constant.RANGE_DOWNLOAD_STARTED;
 import static service.cn.com.rxdownload.utils.Utils.empty;
 import static service.cn.com.rxdownload.utils.Utils.getPaths;
 import static service.cn.com.rxdownload.utils.Utils.mkdirs;
@@ -44,7 +51,7 @@ public class TemporaryRecord {
     private boolean serverFileChanged = false;
 
     private DataBaseHelper dataBaseHelper;
-    private FileHelper fileHelper;
+    private FileHelper fileHelper;//文件的操作，都是把文件传进去，大小问题
     private DownloadApi downloadApi;
 
     public TemporaryRecord(DownloadBean bean) {
@@ -159,4 +166,81 @@ public class TemporaryRecord {
         fileHelper.saveFile(emitter, index, tempFile(), file(), response);
     }
 
+    public String readLastModify() throws IOException {
+        return fileHelper.readLastModify(lastModifyFile());
+    }
+
+    public void setFileChanged(boolean serverFileChanged) {
+        this.serverFileChanged = serverFileChanged;
+    }
+    public boolean isFileChanged() {
+        return serverFileChanged;
+    }
+    public boolean isSupportRange() {
+        return rangeSupport;
+    }
+
+    public boolean tempFileDamaged() throws IOException {
+        return fileHelper.tempFileDamaged(tempFile(), contentLength);
+    }
+    /**
+     * Normal download request.
+     *
+     * @return response
+     */
+    public Flowable<Response<ResponseBody>> download() {
+        return downloadApi.download(null, bean.getUrl());
+    }
+    public int getMaxRetryCount() {
+        return maxRetryCount;
+    }
+    public int getMaxThreads() {
+        return maxThreads;
+    }
+    /**
+     * Range download request
+     *
+     * @param index download index
+     * @return response
+     */
+    public Flowable<Response<ResponseBody>> rangeDownload(final int index) {
+        return Flowable
+                .create(new FlowableOnSubscribe<DownloadRange>() {
+                    @Override
+                    public void subscribe(FlowableEmitter<DownloadRange> e) throws Exception {
+                        DownloadRange range = readDownloadRange(index);
+                        if (range.legal()) {
+                            e.onNext(range);
+                        }
+                        e.onComplete();
+                    }
+                }, BackpressureStrategy.ERROR)
+                .flatMap(new Function<DownloadRange, Publisher<Response<ResponseBody>>>() {
+                    @Override
+                    public Publisher<Response<ResponseBody>> apply(DownloadRange range)
+                            throws Exception {
+                        System.out.println("Thread: " + Thread.currentThread().getName() + "; " + RANGE_DOWNLOAD_STARTED + "; " + index + "; " + range.start + "; " + range.end);
+                        String rangeStr = "bytes=" + range.start + "-" + range.end;
+                        return downloadApi.download(rangeStr, bean.getUrl());
+                    }
+                });
+    }
+
+    /**
+     * Read download range from record file.
+     *
+     * @param index index
+     * @return
+     * @throws IOException
+     */
+    public DownloadRange readDownloadRange(int index) throws IOException {
+        return fileHelper.readDownloadRange(tempFile(), index);
+    }
+
+    public boolean fileNotComplete() throws IOException {
+        return fileHelper.fileNotComplete(tempFile());
+    }
+    public boolean fileComplete() {
+        return file().length() == contentLength;
+    }
 }
