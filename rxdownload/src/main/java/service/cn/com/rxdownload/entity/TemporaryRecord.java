@@ -39,6 +39,8 @@ public class TemporaryRecord {
 
     private String filePath;
     private String tempPath;
+    private String tempcmpPath;
+
     private String lmfPath;
 
     private int maxRetryCount;
@@ -88,6 +90,7 @@ public class TemporaryRecord {
         String[] paths = getPaths(bean.getSaveName(), realSavePath);
         filePath = paths[0];
         tempPath = paths[1];
+        tempcmpPath = paths[1]+"cmp";
         lmfPath = paths[2];
     }
 
@@ -99,7 +102,7 @@ public class TemporaryRecord {
      * @throws ParseException
      */
     public void prepareNormalDownload() throws IOException, ParseException {
-        fileHelper.prepareDownload(lastModifyFile(), file(), contentLength, lastModify);
+        fileHelper.prepareDownload(lastModifyFile(), file(), contentLength, lastModify,tempcmpFile());
     }
 
     /**
@@ -120,6 +123,10 @@ public class TemporaryRecord {
     }
     public File tempFile() {
         return new File(tempPath);
+    }
+
+    public File tempcmpFile() {
+        return new File(tempcmpPath);
     }
     public String getSaveName() {
         return bean.getSaveName();
@@ -150,7 +157,7 @@ public class TemporaryRecord {
      * @param response response
      */
     public void save(FlowableEmitter<DownloadStatus> e, Response<ResponseBody> response) throws Exception{
-        fileHelper.saveFile(e, file(), response);
+        fileHelper.saveFile(e, file(), response,contentLength,tempcmpFile());
     }
 
     /**
@@ -240,7 +247,10 @@ public class TemporaryRecord {
     public boolean fileNotComplete() throws IOException {
         return fileHelper.fileNotComplete(tempFile());
     }
-    public boolean fileComplete() {
-        return file().length() == contentLength;
+    public boolean fileComplete()  throws IOException{
+
+        return fileHelper.fileNotNormalComplete(tempcmpFile());
+
+//        return file().length() == contentLength;
     }
 }

@@ -87,7 +87,7 @@ public abstract class DownloadType {
                             downloadSize = status.getDownloadSize();
                         }
                         System.out.println("1111111111111111133333333333333");
-//                        record.update(status);
+//                      record.update(status);
                         return status;
                     }
                 })

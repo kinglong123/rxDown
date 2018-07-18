@@ -49,12 +49,44 @@ public class FileHelper {
         RECORD_FILE_TOTAL_SIZE = EACH_RECORD_SIZE * maxThreads;
     }
 
-    public void prepareDownload(File lastModifyFile, File saveFile, long fileLength, String lastModify)
+    public void prepareDownload(File lastModifyFile, File saveFile, long fileLength, String lastModify,File tempcmpFile)
             throws IOException, ParseException {
 
         writeLastModify(lastModifyFile, lastModify);
         prepareFile(saveFile, fileLength);
+        prepareCmpFile(tempcmpFile);
     }
+
+
+    private void prepareCmpFile(File tempcmpFile)
+            throws IOException {
+        setCmpFile(1,tempcmpFile);
+    }
+
+
+    private void setCmpFile(int status,File FtempCmpFile)
+            throws IOException {
+
+        RandomAccessFile rRecord = null;
+        FileChannel channel = null;
+        try {
+
+
+            rRecord = new RandomAccessFile(FtempCmpFile, ACCESS);
+            rRecord.setLength(4); //设置指针记录文件的大小
+
+            channel = rRecord.getChannel();
+            MappedByteBuffer buffer = channel.map(READ_WRITE, 0, 4);
+            buffer.putInt(status);
+
+        } finally {
+            closeQuietly(channel);
+            closeQuietly(rRecord);
+        }
+    }
+
+
+
 
     public void prepareDownload(File lastModifyFile, File tempFile, File saveFile,
                                 long fileLength, String lastModify)
@@ -65,7 +97,7 @@ public class FileHelper {
     }
 
     public void saveFile(FlowableEmitter<DownloadStatus> emitter, File saveFile,
-            Response<ResponseBody> resp) {
+            Response<ResponseBody> resp,long length,File tempCmpFile) {
 
         InputStream inputStream = null;
         OutputStream outputStream = null;
@@ -93,7 +125,16 @@ public class FileHelper {
                     downloadSize += readLen;
                     status.setDownloadSize(downloadSize);
 
+                    //怎么判断下载完了呢
+
 //                    System.out.println("11111111111while");
+
+                   if(downloadSize == length){
+                       //标识下载完了
+                       setCmpFile(1,tempCmpFile);
+
+                   }
+
                     emitter.onNext(status);
                 }
 
@@ -197,6 +238,34 @@ public class FileHelper {
             closeQuietly(record);
         }
     }
+
+    public boolean fileNotNormalComplete(File tempCmpFile) throws IOException {
+
+        RandomAccessFile rRecord = null;
+        FileChannel channel = null;
+        try {
+
+
+            rRecord = new RandomAccessFile(tempCmpFile, ACCESS);
+            rRecord.setLength(4); //设置指针记录文件的大小
+
+            channel = rRecord.getChannel();
+            MappedByteBuffer buffer = channel.map(READ_WRITE, 0, 4);
+            int status = buffer.getInt();
+
+            if(status>0){
+                return true;
+            }else {
+                return false;
+            }
+
+        } finally {
+            closeQuietly(channel);
+            closeQuietly(rRecord);
+        }
+    }
+
+
 
     public boolean tempFileDamaged(File tempFile, long fileLength) throws IOException {
 

@@ -124,14 +124,18 @@ public class TemporaryRecordTableList {
         }
     }
     private DownloadType notSupportRangeType(String url) {
-        if (normalDownloadNotComplete(url)) {//是否下载完了 不支持分页的NormalDownload这样判断是有问题的，因为第二次开始，判断都是ok的。
-            // no不支持分页的，判断是不是下载完了，也应该有一个tem记录
+        try {
+            if (normalDownloadNotComplete(url)) {//是否下载完了 不支持分页的NormalDownload这样判断是有问题的，因为第二次开始，判断都是ok的。
+                // no不支持分页的，判断是不是下载完了，也应该有一个tem记录
+                return new DownloadType.NormalDownload(map.get(url));
+            } else {
+                return new DownloadType.AlreadyDownloaded(map.get(url));
+            }
+        } catch (IOException e) {
             return new DownloadType.NormalDownload(map.get(url));
-        } else {
-            return new DownloadType.AlreadyDownloaded(map.get(url));
         }
     }
-    private boolean normalDownloadNotComplete(String url) {
+    private boolean normalDownloadNotComplete(String url)  throws IOException{
         return !map.get(url).fileComplete();
     }
 

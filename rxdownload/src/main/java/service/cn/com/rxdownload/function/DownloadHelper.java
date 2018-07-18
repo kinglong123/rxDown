@@ -330,7 +330,7 @@ public class DownloadHelper {
 
         //这边判断下师傅文件以及下载了的如果以及下载的，不需求创建文件了，继续下载
 
-        downloadType.prepareDownload();
+        downloadType.prepareDownload();//普通下载和支持分块下载的情况不同
         return downloadType.startDownload();
     }
 
