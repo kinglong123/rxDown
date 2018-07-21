@@ -188,11 +188,11 @@ public class TemporaryRecordTableList {
 
     private DownloadType getNormalType(String url) {
         DownloadType type;
-//        if (supportRange(url)) {
-//            type = new DownloadType.MultiThreadDownload(map.get(url));
-//        } else {
+        if (supportRange(url)) {
+            type = new DownloadType.MultiThreadDownload(map.get(url));
+        } else {
             type = new DownloadType.NormalDownload(map.get(url));
-//        }
+        }
         return type;
     }
 
@@ -233,5 +233,10 @@ public class TemporaryRecordTableList {
         }
     }
 
+    public void update(String url,int flag) {
+        if(map.get(url) !=null) {
+            map.get(url).updateRecord(url, flag);
+        }
+    }
 
 }

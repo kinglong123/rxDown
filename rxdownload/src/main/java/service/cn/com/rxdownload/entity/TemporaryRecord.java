@@ -19,6 +19,9 @@ import service.cn.com.rxdownload.function.FileHelper;
 
 import static android.text.TextUtils.concat;
 import static java.io.File.separator;
+import static service.cn.com.rxdownload.entity.DownloadFlag.*;
+import static service.cn.com.rxdownload.entity.DownloadFlag.FAILED;
+import static service.cn.com.rxdownload.entity.DownloadFlag.STARTED;
 import static service.cn.com.rxdownload.utils.Constant.CACHE;
 import static service.cn.com.rxdownload.utils.Constant.RANGE_DOWNLOAD_STARTED;
 import static service.cn.com.rxdownload.utils.Utils.empty;
@@ -253,4 +256,38 @@ public class TemporaryRecord {
 
 //        return file().length() == contentLength;
     }
+
+
+
+    public void start() {
+        if (dataBaseHelper.recordNotExists(bean.getUrl())) {
+            dataBaseHelper.insertRecord(bean, STARTED);
+        } else {
+            dataBaseHelper.updateRecord(bean.getUrl(), bean.getSaveName(), bean.getSavePath(), STARTED);
+        }
+    }
+    public void updateRecord(String url,int flag) {
+        dataBaseHelper.updateRecord(url, flag);
+    }
+
+    public void update(DownloadStatus status) {
+        dataBaseHelper.updateStatus(bean.getUrl(), status);
+    }
+    public void error() {
+        dataBaseHelper.updateRecord(bean.getUrl(), FAILED);
+    }
+
+    public void complete() {
+        dataBaseHelper.updateRecord(bean.getUrl(), COMPLETED);
+    }
+    public void cancel() {
+        System.out.println("11111111111111PAUSED");
+        dataBaseHelper.updateRecord(bean.getUrl(), PAUSED);
+    }
+    public void finish() {
+//        dataBaseHelper.closeDataBase();
+    }
+
+
+
 }

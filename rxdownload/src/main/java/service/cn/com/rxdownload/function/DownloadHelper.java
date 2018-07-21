@@ -31,6 +31,7 @@ import service.cn.com.rxdownload.utils.Utils;
 
 import static android.os.Environment.DIRECTORY_DOWNLOADS;
 import static android.os.Environment.getExternalStoragePublicDirectory;
+import static service.cn.com.rxdownload.entity.DownloadFlag.FAILED;
 import static service.cn.com.rxdownload.utils.Constant.DOWNLOAD_URL_EXISTS;
 import static service.cn.com.rxdownload.utils.Constant.NORMAL_RETRY_HINT;
 import static service.cn.com.rxdownload.utils.Constant.REQUEST_RETRY_HINT;
@@ -105,6 +106,11 @@ public class DownloadHelper {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
                         //logError(throwable);
+//                        record.error();
+//                        if(recordTable.getMap() !=null && recordTable.getMap().get(bean.getUrl()) !=null){
+//
+//                        }
+                        recordTable.update(bean.getUrl(),FAILED);
 
                         throwable.printStackTrace();
 //                        System.out.println("s:"+throwable.printStackTrace(););
@@ -126,6 +132,13 @@ public class DownloadHelper {
      */
     private Observable<DownloadType> getDownloadType(final String url) {
         return Observable.just(1)
+                .doOnNext(new Consumer<Object>() {
+                    @Override
+                    public void accept(Object o) throws Exception {
+                        recordTable.init(url, maxThreads, maxRetryCount, defaultSavePath,
+                                downloadApi, dataBaseHelper);//初始化给个下载任务的细节 记录在TemporaryRecord
+                    }
+                })
                 .flatMap(new Function<Integer, ObservableSource<Object>>() {
                     @Override
                     public ObservableSource<Object> apply(Integer integer)
@@ -139,13 +152,7 @@ public class DownloadHelper {
                         return checkRange(url);//确认支持支持分块
                     }
                 })
-                .doOnNext(new Consumer<Object>() {
-                    @Override
-                    public void accept(Object o) throws Exception {
-                        recordTable.init(url, maxThreads, maxRetryCount, defaultSavePath,
-                                downloadApi, dataBaseHelper);//初始化给个下载任务的细节 记录在TemporaryRecord
-                    }
-                })
+
                 .flatMap(new Function<Object, ObservableSource<DownloadType>>() {
                     @Override
                     public ObservableSource<DownloadType> apply(Object o) throws Exception {

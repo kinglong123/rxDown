@@ -55,6 +55,8 @@ import static service.cn.com.rxdownload.utils.Utils.formatStr;
 public abstract class DownloadType {
     protected TemporaryRecord record;
 
+    protected boolean isErr;
+
     private DownloadType(TemporaryRecord record) {
         this.record = record;
     }
@@ -69,7 +71,8 @@ public abstract class DownloadType {
                     @Override
                     public void accept(Subscription subscription) throws Exception {
                         System.out.println(startLog());
-//                        record.start();
+                        isErr = false;
+                        record.start();
                     }
                 })
                 .flatMap(new Function<Integer, Publisher<DownloadStatus>>() {
@@ -87,7 +90,7 @@ public abstract class DownloadType {
                             downloadSize = status.getDownloadSize();
                         }
                         System.out.println("1111111111111111133333333333333");
-//                      record.update(status);
+                        record.update(status);
                         return status;
                     }
                 })
@@ -96,28 +99,37 @@ public abstract class DownloadType {
                     public void accept(Throwable throwable) throws Exception {
                         System.out.println(errorLog());
                         throwable.printStackTrace();
-//                        record.error();
+                        isErr = true;
+                        System.out.println("11111111111doOnError");
+                        record.error();
                     }
                 })
                 .doOnComplete(new Action() {
                     @Override
                     public void run() throws Exception {
                         System.out.println(completeLog());
-//                        record.complete();
+                        isErr = false;
+                        record.complete();
                     }
                 })
                 .doOnCancel(new Action() {
                     @Override
                     public void run() throws Exception {
                         System.out.println(cancelLog());
-//                        record.cancel();
+                        System.out.println("11111111111doOnCancel:"+isErr);
+                        if(!isErr){//已经是错误的了状态，不做cancel
+                            System.out.println("11111111111doOnCancel"+isErr);
+                            record.cancel();
+                        }
+
                     }
                 })
                 .doFinally(new Action() {
                     @Override
                     public void run() throws Exception {
                         System.out.println(finishLog());
-//                        record.finish();
+                        isErr = false;
+                        record.finish();
                     }
                 })
                 .toObservable();

@@ -60,7 +60,7 @@ public class FileHelper {
 
     private void prepareCmpFile(File tempcmpFile)
             throws IOException {
-        setCmpFile(1,tempcmpFile);
+        setCmpFile(0,tempcmpFile);
     }
 
 
@@ -131,6 +131,8 @@ public class FileHelper {
 
                    if(downloadSize == length){
                        //标识下载完了
+
+                       System.out.println("llll1111jjjjjjjjjjjjjjjjjjjjjjjtempCmpFiletempCmpFiletempCmpFile");
                        setCmpFile(1,tempCmpFile);
 
                    }
@@ -144,6 +146,7 @@ public class FileHelper {
                 closeQuietly(inputStream);
                 closeQuietly(outputStream);
                 closeQuietly(resp.body());
+
             }
         } catch (Exception e) {
             emitter.onError(e);

@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -15,6 +16,7 @@ import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import service.cn.com.rxdownload.RxDownload;
+import service.cn.com.rxdownload.db.DataBaseHelper;
 import service.cn.com.rxdownload.entity.DownloadBean;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 
@@ -46,6 +48,18 @@ public class MainActivity extends AppCompatActivity {
     @InjectView(R.id.action)
     Button mAction;
 
+    @InjectView(R.id.insert)
+    Button mInsert;
+    @InjectView(R.id.update)
+    Button mUpdate;
+    @InjectView(R.id.select)
+    Button mSelect;
+    @InjectView(R.id.tvstatus)
+    Button mTvstatus;
+
+
+
+
     @InjectView(R.id.content_basic_download)
     RelativeLayout mContentBasicDownload;
 
@@ -68,6 +82,40 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 pause();
+            }
+        });
+
+
+        mInsert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DownloadBean downloadBean = new DownloadBean();
+                downloadBean.setExtra1("111");
+                downloadBean.setSaveName("adqa");
+                downloadBean.setUrl("http:asda");
+                downloadBean.setSavePath("asda");
+
+                DataBaseHelper.getSingleton(getApplicationContext()).insertRecord(downloadBean,12);
+            }
+        });
+        mUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DownloadBean downloadBean = new DownloadBean();
+                downloadBean.setExtra1("111");
+                downloadBean.setSaveName("adqa");
+                downloadBean.setUrl("http:asda");
+                downloadBean.setSavePath("asda");
+                DataBaseHelper.getSingleton(getApplicationContext()).updateRecord(downloadBean.getUrl(),"你","你",50);
+            }
+        });
+
+        mSelect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                boolean s = DataBaseHelper.getSingleton(getApplicationContext()).recordNotExists("http:asda");
+                System.out.println("111111111111:"+s);
             }
         });
     }
@@ -95,16 +143,23 @@ public class MainActivity extends AppCompatActivity {
 
                         System.out.println("111111111111111:" + status.getPercent());
                         mProgress.setProgress((int) (status.getDownloadSize()*100/status.getTotalSize()));
+                        mPercent.setText((int) (status.getDownloadSize()*100/status.getTotalSize())+"");
 
                     }
 
                     @Override
                     public void onError(Throwable e) {
+
+                        Toast.makeText(getApplicationContext(),"错误",Toast.LENGTH_LONG).show();
+                        mTvstatus.setText("错误");
 //                        downloadController.setState(new DownloadController.Paused());
                     }
 
                     @Override
                     public void onComplete() {
+                        Toast.makeText(getApplicationContext(),"完成",Toast.LENGTH_LONG).show();
+                        mTvstatus.setText("完成");
+
 //                        downloadController.setState(new DownloadController.Completed());
                     }
                 });
