@@ -31,6 +31,14 @@ public class DownloadStatus implements Parcelable {
     private long totalSize;
     private long downloadSize;
 
+    public boolean isChunked() {
+        return isChunked;
+    }
+
+    public void setChunked(boolean chunked) {
+        isChunked = chunked;
+    }
+
     public DownloadStatus() {
     }
 

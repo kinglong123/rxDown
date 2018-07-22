@@ -15,11 +15,15 @@ import butterknife.InjectView;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 import service.cn.com.rxdownload.RxDownload;
 import service.cn.com.rxdownload.db.DataBaseHelper;
 import service.cn.com.rxdownload.entity.DownloadBean;
+import service.cn.com.rxdownload.entity.DownloadEvent;
+import service.cn.com.rxdownload.entity.DownloadFlag;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 
+import static android.widget.Toast.LENGTH_SHORT;
 import static service.cn.com.rxdownload.utils.Utils.dispose;
 
 public class MainActivity extends AppCompatActivity {
@@ -58,6 +62,10 @@ public class MainActivity extends AppCompatActivity {
     Button mTvstatus;
 
 
+    @InjectView(R.id.serviceAction)
+    Button mServiceAction;
+    @InjectView(R.id.pauseService)
+    Button mPauseService;
 
 
     @InjectView(R.id.content_basic_download)
@@ -118,6 +126,20 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("111111111111:"+s);
             }
         });
+
+        mServiceAction.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startService();
+            }
+        });
+
+        mPauseService.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startPause();
+            }
+        });
     }
 
     public final static String URL = "http://dldir1.qq.com/weixin/android/weixin6330android920.apk";
@@ -141,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onNext(DownloadStatus status) {
 
-                        System.out.println("111111111111111:" + status.getPercent());
+                        System.out.println("111111111111111start:" + status.getPercent());
                         mProgress.setProgress((int) (status.getDownloadSize()*100/status.getTotalSize()));
                         mPercent.setText((int) (status.getDownloadSize()*100/status.getTotalSize())+"");
 
@@ -165,6 +187,79 @@ public class MainActivity extends AppCompatActivity {
                 });
 
     }
+
+
+    private void startService() {
+        System.out.println("1111111111111111startService");
+
+        RxDownload.getInstance(this).serviceDownload(new DownloadBean.Builder(URL)
+                .setSaveName(null).setSavePath(null).build())
+                .subscribe(new Consumer<Object>() {
+                    @Override
+                    public void accept(Object o) {
+                        Toast.makeText(MainActivity.this, "下载开始", LENGTH_SHORT).show();
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        throwable.printStackTrace();
+
+                    }
+                });
+
+    }
+
+    private void startPause(){
+
+        RxDownload.getInstance(this).pauseServiceDownload(URL)
+                .subscribe(new Consumer<Object>() {
+
+                    @Override
+                    public void accept(Object o) throws Exception {
+
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+
+                    }
+                });
+
+    }
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        RxDownload.getInstance(this).receiveDownloadStatus(URL)//改用huyu那个，用广播方式来通知，然后自己去查询数据库状态
+                .subscribe(new Consumer<DownloadEvent>() {
+                    @Override
+                    public void accept(DownloadEvent downloadEvent) throws Exception {
+                        if (downloadEvent.getFlag() == DownloadFlag.FAILED) {
+                            Throwable throwable = downloadEvent.getError();
+                            throwable.printStackTrace();
+
+
+                        }
+//                        setEvent(downloadEvent);
+//                        updateProgress(downloadEvent);
+
+                        DownloadStatus downloadStatus = downloadEvent.getDownloadStatus();
+
+                        System.out.println("111111111111111startService:" + downloadStatus.getPercent());
+                        if(downloadStatus.getTotalSize() >0) {
+                            mProgress.setProgress(
+                                    (int) (downloadStatus.getDownloadSize() * 100 / downloadStatus
+                                            .getTotalSize()));
+                            mPercent.setText(
+                                    (int) (downloadStatus.getDownloadSize() * 100 / downloadStatus
+                                            .getTotalSize()) + "");
+                        }
+                    }
+                });
+    }
+
 
 
 }

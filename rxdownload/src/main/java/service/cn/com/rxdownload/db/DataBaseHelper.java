@@ -10,14 +10,15 @@ import com.squareup.sqlbrite.SqlBrite;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.support.annotation.Nullable;
 
 import java.util.List;
 
 import rx.schedulers.Schedulers;
 import service.cn.com.rxdownload.entity.DownloadBean;
+import service.cn.com.rxdownload.entity.DownloadFlag;
 import service.cn.com.rxdownload.entity.DownloadStatus;
 
-import static com.raizlabs.android.dbflow.sql.language.ConditionGroup.clause;
 import static service.cn.com.rxdownload.db.DBColumn.insert;
 
 /**
@@ -94,13 +95,30 @@ public class DataBaseHelper {
     }
 
 
+    public void insertRecord(DownloadBean downloadBean, int flag, String missionId) {
+//        return getWritableDatabase().insert(TABLE_NAME, null, insert(downloadBean, flag, missionId));
+
+        DownTableData downTableData = insert(downloadBean, flag, null);
+
+        ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.url.eq(downloadBean.getUrl()));
+
+        DbBaseBrite<DownTableData> dao = new DbBaseBrite<DownTableData>(
+                DownTableData.class, group);
+
+        dao.setBriteDatabase(getBriteDatabase());
+
+        dao.update(downTableData);
+    }
+
+
+
     public void insertRecord(DownloadBean downloadBean, int flag) {
         DownTableData downTableData = insert(downloadBean, flag, null);
 
         ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.url.eq(downloadBean.getUrl()));
 
         DbBaseBrite<DownTableData> dao = new DbBaseBrite<DownTableData>(
-                DownTableData.class, clause());
+                DownTableData.class, group);
 
         dao.setBriteDatabase(getBriteDatabase());
 
@@ -108,6 +126,23 @@ public class DataBaseHelper {
 
     }
 
+    public void updateRecord(String url, int flag,String missionId) {
+
+        System.out.println("11111111updateRecord:"+flag);
+
+        ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.url.eq(url));
+
+        ConditionGroup setValue =  ConditionGroup.clause();
+        setValue.and(DownTableData_Table.downloadFlag.eq(flag));
+        setValue.and(DownTableData_Table.missionId.eq(missionId));
+
+        List<SQLCondition> sqlConditions = setValue.getConditions();
+        SQLCondition[] setValueArray= sqlConditions.toArray(new SQLCondition[sqlConditions.size()]);
+        DbBaseBrite.updateField(DownTableData.class,setValueArray,group);
+
+//        return getWritableDatabase().update(TABLE_NAME, update(flag),
+//                COLUMN_URL + "=?", new String[]{url});
+    }
 
     public void updateRecord(String url, int flag) {
 
@@ -173,6 +208,72 @@ public class DataBaseHelper {
     }
 
 
+    public void repairErrorFlag() {
 
+        System.out.println("111111111111111repairErrorFlag");
+        ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.downloadFlag.eq(DownloadFlag.STARTED));
+
+        ConditionGroup setValue =  ConditionGroup.clause();
+        setValue.and(DownTableData_Table.downloadFlag.eq(DownloadFlag.STARTED));
+        List<SQLCondition> sqlConditions = setValue.getConditions();
+        SQLCondition[] setValueArray= sqlConditions.toArray(new SQLCondition[sqlConditions.size()]);
+        DbBaseBrite.updateField(DownTableData.class,setValueArray,group);
+
+
+
+    }
+    /**
+     * Read the url's download status.
+     *
+     * @param url url
+     * @return download status
+     */
+    public DownloadStatus readStatus(String url) {
+
+
+
+        ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.url.eq(url));
+
+        DbBaseBrite<DownTableData> dao = new DbBaseBrite<DownTableData>(
+                DownTableData.class, group);
+
+        List<DownTableData> downTableData=  dao.selectDate();
+        DownloadStatus mDownloadStatus = new DownloadStatus();
+
+        if(downTableData == null ||downTableData.size() ==0){
+//            return mDownloadStatus;
+        }else {
+            DownTableData downTableData1 =  downTableData.get(0);
+
+            mDownloadStatus.setDownloadSize(downTableData1.getDownloadSize());
+            mDownloadStatus.setTotalSize(downTableData1.getTotalSize());
+            mDownloadStatus.setChunked(downTableData1.isChunked());
+
+        }
+        return mDownloadStatus;
+    }
+
+    /**
+     * Read single Record.
+     *
+     * @param url url
+     * @return Record
+     */
+    @Nullable
+    public DownTableData readSingleRecord(String url) {
+
+        ConditionGroup group =  ConditionGroup.clause().and(DownTableData_Table.url.eq(url));
+
+        DbBaseBrite<DownTableData> dao = new DbBaseBrite<DownTableData>(
+                DownTableData.class, group);
+
+        List<DownTableData> downTableData=  dao.selectDate();
+        if(downTableData == null || downTableData.size() ==0){
+            return null;
+        }else {
+            return downTableData.get(0);
+        }
+
+    }
 
 }

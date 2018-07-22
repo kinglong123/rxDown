@@ -18,6 +18,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,9 +29,12 @@ import io.reactivex.ObservableSource;
 import io.reactivex.ObservableTransformer;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.BiPredicate;
+import io.reactivex.processors.BehaviorProcessor;
+import io.reactivex.processors.FlowableProcessor;
 import okhttp3.internal.http.HttpHeaders;
 import retrofit2.HttpException;
 import retrofit2.Response;
+import service.cn.com.rxdownload.entity.DownloadEvent;
 
 import static android.text.TextUtils.concat;
 import static java.io.File.separator;
@@ -132,16 +136,16 @@ public class Utils {
         }
     }
 
-//    public static FlowableProcessor<DownloadEvent> createProcessor(
-//            String missionId, Map<String, FlowableProcessor<DownloadEvent>> processorMap) {
-//
-//        if (processorMap.get(missionId) == null) {
-//            FlowableProcessor<DownloadEvent> processor =
-//                    BehaviorProcessor.<DownloadEvent>create().toSerialized();
-//            processorMap.put(missionId, processor);
-//        }
-//        return processorMap.get(missionId);
-//    }
+    public static FlowableProcessor<DownloadEvent> createProcessor(
+            String missionId, Map<String, FlowableProcessor<DownloadEvent>> processorMap) {
+
+        if (processorMap.get(missionId) == null) {
+            FlowableProcessor<DownloadEvent> processor =
+                    BehaviorProcessor.<DownloadEvent>create().toSerialized();
+            processorMap.put(missionId, processor);
+        }
+        return processorMap.get(missionId);
+    }
 
     public static <U> ObservableTransformer<U, U> retry(final String hint, final int retryCount) {
         return new ObservableTransformer<U, U>() {
@@ -196,6 +200,7 @@ public class Utils {
         if (fileName.endsWith("\"")) {
             fileName = fileName.substring(0, fileName.length() - 1);
         }
+        System.out.println("2222222222:"+fileName);
         return fileName;
     }
 
@@ -293,6 +298,18 @@ public class Utils {
     }
 
     /**
+     * return files
+     *
+     * @param saveName saveName
+     * @param savePath savePath
+     * @return file, tempFile, lmfFile
+     */
+    public static File[] getFiles(String saveName, String savePath) {
+        String[] paths = getPaths(saveName, savePath);
+        return new File[]{new File(paths[0]), new File(paths[1]), new File(paths[2])};
+    }
+
+    /**
      * return file paths
      *
      * @param saveName saveName
@@ -305,18 +322,6 @@ public class Utils {
         String tempPath = concat(cachePath, separator, saveName, TMP_SUFFIX).toString();
         String lmfPath = concat(cachePath, separator, saveName, LMF_SUFFIX).toString();
         return new String[]{filePath, tempPath, lmfPath};
-    }
-
-    /**
-     * return files
-     *
-     * @param saveName saveName
-     * @param savePath savePath
-     * @return file, tempFile, lmfFile
-     */
-    public static File[] getFiles(String saveName, String savePath) {
-        String[] paths = getPaths(saveName, savePath);
-        return new File[]{new File(paths[0]), new File(paths[1]), new File(paths[2])};
     }
 
     /**

@@ -132,18 +132,27 @@ public class DownloadHelper {
      */
     private Observable<DownloadType> getDownloadType(final String url) {
         return Observable.just(1)
-                .doOnNext(new Consumer<Object>() {
-                    @Override
-                    public void accept(Object o) throws Exception {
-                        recordTable.init(url, maxThreads, maxRetryCount, defaultSavePath,
-                                downloadApi, dataBaseHelper);//初始化给个下载任务的细节 记录在TemporaryRecord
-                    }
-                })
+//                .doOnNext(new Consumer<Object>() {
+//                    @Override
+//                    public void accept(Object o) throws Exception {
+//                        recordTable.init(url, maxThreads, maxRetryCount, defaultSavePath,
+//                                downloadApi, dataBaseHelper);//初始化给个下载任务的细节 记录在TemporaryRecord
+//                              // 是不是移动到加入是就初始化
+//                    }
+//                })
                 .flatMap(new Function<Integer, ObservableSource<Object>>() {
                     @Override
                     public ObservableSource<Object> apply(Integer integer)
                             throws Exception {
                         return checkUrl(url);//确认大小
+                    }
+                })
+                .doOnNext(new Consumer<Object>() {
+                    @Override
+                    public void accept(Object o) throws Exception {
+                        recordTable.init(url, maxThreads, maxRetryCount, defaultSavePath,
+                                downloadApi, dataBaseHelper);//初始化给个下载任务的细节 记录在TemporaryRecord
+                        // 是不是移动到加入是就初始化,有些初始化应该加入就初始化，但是里面有个名字，用过是后面再初始化
                     }
                 })
                 .flatMap(new Function<Object, ObservableSource<Object>>() {
